@@ -1,0 +1,14 @@
+import { GoalForm } from "./_components/GoalForm";
+
+export default function HomePage() {
+  return (
+    <main className="min-h-screen bg-slate-100 p-8">
+      <div className="max-w-4xl mx-auto mb-8 text-center">
+        <h1 className="text-4xl font-extrabold text-slate-900 mb-2">AtomQuest Portal</h1>
+        <p className="text-slate-600">Employee Goal Setting Dashboard</p>
+      </div>
+      
+      <GoalForm />
+    </main>
+  );
+}

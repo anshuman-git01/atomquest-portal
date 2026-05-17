@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" 
+  url      = env("DATABASE_URL")
+}
+
+// --- Standard NextAuth Models ---
+model Account {
+    id                       String  @id @default(cuid())
+    userId                   String
+    type                     String
+    provider                 String
+    providerAccountId        String
+    refresh_token            String? 
+    access_token             String? 
+    expires_at               Int?
+    token_type               String?
+    scope                    String?
+    id_token                 String? 
+    session_state            String?
+    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    refresh_token_expires_in Int?
+
+    @@unique([provider, providerAccountId])
+}
+
+model Session {
+    id           String   @id @default(cuid())
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+    id            String    @id @default(cuid())
+    name          String?
+    email         String?   @unique
+    emailVerified DateTime?
+    image         String?
+    
+    // Custom AtomQuest Roles: "EMPLOYEE", "MANAGER", "ADMIN"
+    role          String    @default("EMPLOYEE")
+    
+    // Org Hierarchy (Self-relation)
+    managerId     String?
+    manager       User?     @relation("UserToManager", fields: [managerId], references: [id])
+    directReports User[]    @relation("UserToManager")
+
+    // Relations
+    accounts      Account[]
+    sessions      Session[]
+    goals         Goal[]
+    auditLogs     AuditLog[]
+}
+
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}
+
+// --- HACKATHON CORE MODELS ---
+
+model Goal {
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  thrustArea    String
+  title         String
+  description   String?
+  // UOM: "NUMERIC", "PERCENTAGE", "TIMELINE", "ZERO_BASED"
+  uom           String
+  target        String     // Stored as string to handle timeline dates or numeric values
+  weightage     Int        // Must validate to max 100 total on frontend
+  // Status: "DRAFT", "PENDING_APPROVAL", "LOCKED"
+  status        String     @default("DRAFT")
+  isShared      Boolean    @default(false)
+  
+  // Self-reference for parent-child relationship (shared goals)
+  parentGoalId  String?
+  parentGoal    Goal?      @relation("GoalHierarchy", fields: [parentGoalId], references: [id], onDelete: Cascade)
+  childGoals    Goal[]     @relation("GoalHierarchy")
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  checkIns      CheckIn[]
+  auditLogs     AuditLog[]
+}
+
+model CheckIn {
+  id                String   @id @default(cuid())
+  goalId            String
+  goal              Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  
+  // Quarter: "Q1", "Q2", "Q3", "Q4"
+  quarter           String
+  actualAchievement String
+  // ProgressStatus: "NOT_STARTED", "ON_TRACK", "COMPLETED"
+  progressStatus    String   @default("NOT_STARTED")
+  managerComment    String?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([goalId, quarter]) // Ensures only one check-in per quarter per goal
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  goalId       String
+  goal         Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  
+  changedById  String
+  changedBy    User     @relation(fields: [changedById], references: [id])
+  
+  action       String
+  previousData String?  // Storing JSON data as stringified text for SQLite
+  newData      String?  
+  
+  createdAt    DateTime @default(now())
+}
+
+model CycleConfig {
+  id          String   @id @default(cuid())
+  phaseName   String   @unique // e.g., "GOAL_SETTING"
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
