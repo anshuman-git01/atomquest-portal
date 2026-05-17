@@ -1,30 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import type { Role } from "~/lib/role-context";
 
 const DEMO_ACCOUNTS = [
   {
     emoji: "Employee",
     title: "Employee",
     description: "View goals and check-ins",
-    email: "employee@test.com",
-    role: "EMPLOYEE",
+    email: "employee@demo.com",
+    role: "EMPLOYEE" as const,
   },
   {
     emoji: "Manager",
     title: "Manager",
     description: "Review and approve goals",
-    email: "manager@test.com",
-    role: "MANAGER",
+    email: "manager@demo.com",
+    role: "MANAGER" as const,
   },
   {
     emoji: "Admin",
     title: "Admin",
     description: "Governance and reporting",
-    email: "admin@test.com",
-    role: "ADMIN",
+    email: "admin@demo.com",
+    role: "ADMIN" as const,
   },
 ];
 
@@ -33,22 +33,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleDemoLogin = async (email: string, role: string) => {
+  const handleDemoLogin = (email: string, role: Role) => {
     setLoading(email);
     setError(null);
 
     try {
-      const result = await signIn("demo-login", {
-        email,
-        role,
-        redirect: false,
-      });
-
-      if (!result?.ok) {
-        throw new Error(result?.error || "Login failed");
-      }
-
-      // Successful login - redirect to home
+      localStorage.setItem("demo-role", role);
       router.push("/");
       router.refresh();
     } catch (err) {

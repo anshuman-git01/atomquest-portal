@@ -1,36 +1,43 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useCallback, useEffect, useState } from "react";
 
-type Role = "EMPLOYEE" | "MANAGER" | "ADMIN";
+export type Role = "EMPLOYEE" | "MANAGER" | "ADMIN";
 
 interface RoleContextType {
   role: Role;
   setRole: (role: Role) => void;
   currentUserId: string;
+  isLoading: boolean;
 }
 
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
+const STORAGE_KEY = "demo-role";
+
+const ROLES: Role[] = ["EMPLOYEE", "MANAGER", "ADMIN"];
+const DEFAULT_ROLE: Role = "EMPLOYEE";
+
+function isRole(value: string | null): value is Role {
+  return ROLES.includes(value as Role);
+}
 
 export function RoleProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRoleState] = useState<Role>("EMPLOYEE");
+  const [role, setRoleState] = useState<Role>(DEFAULT_ROLE);
   const [mounted, setMounted] = useState(false);
 
-  // Load from localStorage on mount
   useEffect(() => {
-    const savedRole = localStorage.getItem("demo-role") as Role | null;
-    if (savedRole && ["EMPLOYEE", "MANAGER", "ADMIN"].includes(savedRole)) {
+    const savedRole = localStorage.getItem(STORAGE_KEY);
+    if (isRole(savedRole)) {
       setRoleState(savedRole);
     }
     setMounted(true);
   }, []);
 
-  const setRole = (newRole: Role) => {
+  const setRole = useCallback((newRole: Role) => {
     setRoleState(newRole);
-    localStorage.setItem("demo-role", newRole);
-  };
+    localStorage.setItem(STORAGE_KEY, newRole);
+  }, []);
 
-  // Demo user IDs
   const userIds: Record<Role, string> = {
     EMPLOYEE: "emp1",
     MANAGER: "mgr1",
@@ -38,7 +45,9 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <RoleContext.Provider value={{ role, setRole, currentUserId: userIds[role] }}>
+    <RoleContext.Provider
+      value={{ role, setRole, currentUserId: userIds[role], isLoading: !mounted }}
+    >
       {mounted ? children : <div>Loading...</div>}
     </RoleContext.Provider>
   );

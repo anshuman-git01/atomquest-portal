@@ -23,6 +23,10 @@ const inputClassName =
 const labelClassName = "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-600";
 
 function isCheckInWindowOpen(selectedQuarter: string): boolean {
+  if (process.env.NODE_ENV === "development") {
+    return true;
+  }
+
   const currentMonth = new Date().getMonth();
   
   switch (selectedQuarter) {
@@ -50,15 +54,21 @@ function formatUom(uom: string) {
 }
 
 function GoalCheckInCard({ goal }: { goal: LockedGoal }) {
+  const utils = api.useUtils();
   const [quarter, setQuarter] = useState<Quarter>("Q1");
   const [actualAchievement, setActualAchievement] = useState("");
   const [progressStatus, setProgressStatus] = useState<ProgressStatus>("ON_TRACK");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const createCheckIn = api.checkin.createCheckIn.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       setSuccessMessage("Check-in logged!");
       setActualAchievement("");
+      await Promise.all([
+        utils.checkin.getTeamCheckIns.invalidate(),
+        utils.admin.getCompletionReport.invalidate(),
+        utils.admin.getAnalyticsMetrics.invalidate(),
+      ]);
       setTimeout(() => setSuccessMessage(null), 3000);
     },
     onError: (error) => {

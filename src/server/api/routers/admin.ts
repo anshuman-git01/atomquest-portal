@@ -1,9 +1,40 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
+async function createAuditLog(
+  ctx: { db: any },
+  input: {
+    goalId: string;
+    action: string;
+    previousData?: unknown;
+    newData?: unknown;
+  },
+) {
+  const admin = await ctx.db.user.findUnique({ where: { id: "adm1" } });
+  if (!admin) return;
+
+  await ctx.db.auditLog.create({
+    data: {
+      goalId: input.goalId,
+      changedById: "adm1",
+      action: input.action,
+      previousData: input.previousData ? JSON.stringify(input.previousData) : null,
+      newData: input.newData ? JSON.stringify(input.newData) : null,
+    },
+  });
+}
+
 export const adminRouter = createTRPCRouter({
+  getEmployees: publicProcedure.query(async ({ ctx }) => {
+    return ctx.db.user.findMany({
+      where: { role: "EMPLOYEE" },
+      select: { id: true, name: true, email: true },
+      orderBy: { name: "asc" },
+    });
+  }),
+
   getAnalyticsMetrics: publicProcedure.query(async ({ ctx }) => {
-    const goals = await ctx.db.goal.findMany();
+    const goals = await ctx.db.goal.findMany({ include: { user: true } });
     const checkins = await ctx.db.checkIn.findMany();
     const users = await ctx.db.user.findMany({ where: { role: "MANAGER" } });
 
@@ -26,7 +57,7 @@ export const adminRouter = createTRPCRouter({
 
     const managerMetrics = users
       .map((manager) => {
-        const managerGoals = goals.filter((g) => g.userId === manager.id);
+        const managerGoals = goals.filter((g) => g.user.managerId === manager.id);
         const managerCheckins = checkins.filter((c) => {
           const goal = managerGoals.find((g) => g.id === c.goalId);
           return goal !== undefined;
@@ -72,7 +103,7 @@ export const adminRouter = createTRPCRouter({
         uom: z.enum(["NUMERIC", "PERCENTAGE", "TIMELINE", "ZERO_BASED"]),
         target: z.string().min(1),
         weightage: z.coerce.number().min(10).max(100),
-        employeeIds: z.array(z.string()),
+        employeeIds: z.array(z.string()).min(1),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -85,7 +116,18 @@ export const adminRouter = createTRPCRouter({
               ...goalData,
               userId,
               status: "LOCKED",
+              isShared: true,
             },
+          }),
+        ),
+      );
+
+      await Promise.all(
+        createdGoals.map((goal) =>
+          createAuditLog(ctx, {
+            goalId: goal.id,
+            action: "PUSHED_SHARED_GOAL",
+            newData: goal,
           }),
         ),
       );
@@ -95,7 +137,27 @@ export const adminRouter = createTRPCRouter({
 
   getCompletionReport: publicProcedure.query(async ({ ctx }) => {
     const goals = await ctx.db.goal.findMany();
-    const checkins = await ctx.db.checkIn.findMany();
+    const checkins = await ctx.db.checkIn.findMany({
+      include: {
+        goal: {
+          include: {
+            user: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const achievementRows = checkins.map((checkIn) => ({
+      employee: checkIn.goal.user.name ?? "Unknown employee",
+      email: checkIn.goal.user.email ?? "",
+      goal: checkIn.goal.title,
+      quarter: checkIn.quarter,
+      target: checkIn.goal.target,
+      actual: checkIn.actualAchievement,
+      uom: checkIn.goal.uom,
+      progressStatus: checkIn.progressStatus,
+    }));
 
     return {
       totalGoals: goals.length,
@@ -104,6 +166,9 @@ export const adminRouter = createTRPCRouter({
       completedCheckins: checkins.filter(
         (c) => c.progressStatus === "COMPLETED",
       ).length,
+      onTrackCheckins: checkins.filter((c) => c.progressStatus === "ON_TRACK").length,
+      notStartedCheckins: checkins.filter((c) => c.progressStatus === "NOT_STARTED").length,
+      achievementRows,
     };
   }),
 
@@ -117,11 +182,27 @@ export const adminRouter = createTRPCRouter({
   unlockGoal: publicProcedure
     .input(z.object({ goalId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.goal.update({
+      const previousGoal = await ctx.db.goal.findUnique({ where: { id: input.goalId } });
+      const goal = await ctx.db.goal.update({
         where: { id: input.goalId },
         data: { status: "DRAFT" },
       });
+      await createAuditLog(ctx, {
+        goalId: goal.id,
+        action: "UNLOCKED_GOAL",
+        previousData: previousGoal,
+        newData: goal,
+      });
+      return goal;
     }),
+
+  getLockedGoalsForAdmin: publicProcedure.query(async ({ ctx }) => {
+    return ctx.db.goal.findMany({
+      where: { status: "LOCKED" },
+      include: { user: true },
+      orderBy: { updatedAt: "desc" },
+    });
+  }),
 
   cycleConfig: publicProcedure
     .input(
@@ -136,6 +217,7 @@ export const adminRouter = createTRPCRouter({
         ]),
         startDate: z.string(),
         endDate: z.string(),
+        isActive: z.boolean().default(true),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -145,6 +227,7 @@ export const adminRouter = createTRPCRouter({
         update: {
           startDate: input.startDate,
           endDate: input.endDate,
+          isActive: input.isActive,
         },
       });
     }),

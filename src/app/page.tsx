@@ -6,19 +6,21 @@ import { api } from "~/trpc/react";
 import { useRole } from "~/lib/role-context";
 
 export default function HomePage() {
-  const { role } = useRole();
+  const { role, isLoading } = useRole();
 
-  const userRole = role || "EMPLOYEE";
+  if (isLoading) {
+    return null;
+  }
 
-  if (userRole === "EMPLOYEE") {
+  if (role === "EMPLOYEE") {
     return <EmployeeDashboard />;
   }
 
-  if (userRole === "MANAGER") {
+  if (role === "MANAGER") {
     return <ManagerDashboard />;
   }
 
-  if (userRole === "ADMIN") {
+  if (role === "ADMIN") {
     return <AdminDashboard />;
   }
 
@@ -27,9 +29,9 @@ export default function HomePage() {
 
 // Employee Dashboard
 function EmployeeDashboard() {
-  const { role } = useRole();
-  const { data: lockedGoals } = api.goal.getLockedGoals.useQuery({ userId: "emp1" });
-  const { data: draftGoals } = api.goal.getPendingGoals.useQuery({ userId: "emp1", role });
+  const { currentUserId, role } = useRole();
+  const { data: lockedGoals } = api.goal.getLockedGoals.useQuery({ userId: currentUserId });
+  const { data: draftGoals } = api.goal.getPendingGoals.useQuery({ userId: currentUserId, role });
 
   const totalGoals = (lockedGoals?.length || 0) + (draftGoals?.length || 0);
   const draftCount = draftGoals?.length || 0;
@@ -79,7 +81,7 @@ function EmployeeDashboard() {
 
         {/* CTA Button */}
         <Link
-          href="/"
+          href="/goals"
           className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition"
         >
           Create New Goal

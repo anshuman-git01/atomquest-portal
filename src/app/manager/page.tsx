@@ -28,33 +28,33 @@ export default function ManagerDashboardPage() {
   const [editWeightage, setEditWeightage] = useState<number | "">();
 
   const approveGoal = api.goal.approveGoal.useMutation({
-    onSuccess: (_, variables) => {
-      utils.goal.getPendingGoals.setData(undefined, (oldData) => {
-        if (!oldData) return oldData;
-        return oldData.filter((goal) => goal.id !== variables.goalId);
-      });
+    onSuccess: async () => {
+      await Promise.all([
+        utils.goal.getPendingGoals.invalidate(),
+        utils.goal.getLockedGoals.invalidate(),
+        utils.admin.getAuditLogs.invalidate(),
+        utils.admin.getCompletionReport.invalidate(),
+        utils.admin.getAnalyticsMetrics.invalidate(),
+      ]);
     },
   });
 
   const returnGoal = api.goal.returnGoal.useMutation({
-    onSuccess: (_, variables) => {
-      utils.goal.getPendingGoals.setData(undefined, (oldData) => {
-        if (!oldData) return oldData;
-        return oldData.filter((goal) => goal.id !== variables.goalId);
-      });
+    onSuccess: async () => {
+      await Promise.all([
+        utils.goal.getPendingGoals.invalidate(),
+        utils.admin.getAuditLogs.invalidate(),
+      ]);
     },
   });
 
   const updateGoalInline = api.goal.updateGoalInline.useMutation({
-    onSuccess: (_, variables) => {
-      utils.goal.getPendingGoals.setData(undefined, (oldData) => {
-        if (!oldData) return oldData;
-        return oldData.map((goal) =>
-          goal.id === variables.goalId
-            ? { ...goal, target: variables.newTarget, weightage: variables.newWeightage }
-            : goal,
-        );
-      });
+    onSuccess: async () => {
+      await Promise.all([
+        utils.goal.getPendingGoals.invalidate(),
+        utils.admin.getAuditLogs.invalidate(),
+        utils.admin.getAnalyticsMetrics.invalidate(),
+      ]);
       setEditingGoalId(null);
       setEditTarget("");
       setEditWeightage("");

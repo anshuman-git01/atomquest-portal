@@ -1,6 +1,30 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
+async function createAuditLog(
+  ctx: { db: any },
+  input: {
+    goalId: string;
+    changedById: string;
+    action: string;
+    previousData?: unknown;
+    newData?: unknown;
+  },
+) {
+  const changedBy = await ctx.db.user.findUnique({ where: { id: input.changedById } });
+  if (!changedBy) return;
+
+  await ctx.db.auditLog.create({
+    data: {
+      goalId: input.goalId,
+      changedById: input.changedById,
+      action: input.action,
+      previousData: input.previousData ? JSON.stringify(input.previousData) : null,
+      newData: input.newData ? JSON.stringify(input.newData) : null,
+    },
+  });
+}
+
 const goalInputSchema = z.object({
   thrustArea: z.string().min(1),
   title: z.string().min(1),
@@ -51,19 +75,37 @@ export const goalRouter = createTRPCRouter({
   approveGoal: publicProcedure
     .input(z.object({ goalId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.goal.update({
+      const previousGoal = await ctx.db.goal.findUnique({ where: { id: input.goalId } });
+      const goal = await ctx.db.goal.update({
         where: { id: input.goalId },
         data: { status: "LOCKED" },
       });
+      await createAuditLog(ctx, {
+        goalId: goal.id,
+        changedById: "mgr1",
+        action: "APPROVED_GOAL",
+        previousData: previousGoal,
+        newData: goal,
+      });
+      return goal;
     }),
 
   returnGoal: publicProcedure
     .input(z.object({ goalId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.goal.update({
+      const previousGoal = await ctx.db.goal.findUnique({ where: { id: input.goalId } });
+      const goal = await ctx.db.goal.update({
         where: { id: input.goalId },
         data: { status: "DRAFT" },
       });
+      await createAuditLog(ctx, {
+        goalId: goal.id,
+        changedById: "mgr1",
+        action: "RETURNED_GOAL",
+        previousData: previousGoal,
+        newData: goal,
+      });
+      return goal;
     }),
 
   getLockedGoals: publicProcedure
@@ -87,29 +129,63 @@ export const goalRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.goal.update({
+      const previousGoal = await ctx.db.goal.findUnique({ where: { id: input.goalId } });
+      const goal = await ctx.db.goal.update({
         where: { id: input.goalId },
         data: {
           target: input.newTarget,
           weightage: input.newWeightage,
         },
       });
+      await createAuditLog(ctx, {
+        goalId: goal.id,
+        changedById: "mgr1",
+        action: "EDITED_GOAL_INLINE",
+        previousData: previousGoal,
+        newData: goal,
+      });
+      return goal;
     }),
 
   submitGoalSheet: publicProcedure
     .input(submitGoalSheetInput)
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.goal.createMany({
-        data: input.goals.map((goal) => ({
+      await ctx.db.goal.deleteMany({
+        where: {
           userId: input.userId,
-          thrustArea: goal.thrustArea,
-          title: goal.title,
-          description: goal.description ?? null,
-          uom: goal.uom,
-          target: goal.target,
-          weightage: goal.weightage,
-          status: "DRAFT",
-        })),
+          status: { in: ["DRAFT", "PENDING_APPROVAL"] },
+          isShared: false,
+        },
       });
+
+      const createdGoals = await Promise.all(
+        input.goals.map((goal) =>
+          ctx.db.goal.create({
+            data: {
+              userId: input.userId,
+              thrustArea: goal.thrustArea,
+              title: goal.title,
+              description: goal.description ?? null,
+              uom: goal.uom,
+              target: goal.target,
+              weightage: goal.weightage,
+              status: "PENDING_APPROVAL",
+            },
+          }),
+        ),
+      );
+
+      await Promise.all(
+        createdGoals.map((goal) =>
+          createAuditLog(ctx, {
+            goalId: goal.id,
+            changedById: input.userId,
+            action: "SUBMITTED_GOAL",
+            newData: goal,
+          }),
+        ),
+      );
+
+      return { count: createdGoals.length };
     }),
 });

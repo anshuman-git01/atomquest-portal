@@ -10,6 +10,7 @@ import { useRole } from "~/lib/role-context";
 
 // --- 1. THE BRD VALIDATION SCHEMA ---
 const goalSchema = z.object({
+  dbId: z.string().optional(),
   thrustArea: z.string().min(1, "Required"),
   title: z.string().min(1, "Required"),
   description: z.string().optional(),
@@ -57,6 +58,7 @@ const defaultFormValues: GoalSheetFormValues = {
 // --- 2. THE COMPONENT ---
 export function GoalForm() {
   const { currentUserId, role } = useRole();
+  const utils = api.useUtils();
   const {
     register,
     control,
@@ -81,6 +83,7 @@ export function GoalForm() {
   useEffect(() => {
     if (draftGoals && draftGoals.length > 0) {
       const formattedGoals = draftGoals.map((goal) => ({
+        dbId: goal.id,
         thrustArea: goal.thrustArea,
         title: goal.title,
         description: goal.description ?? "",
@@ -94,14 +97,25 @@ export function GoalForm() {
     }
   }, [draftGoals, reset]);
 
-  // Check if cycle window is open
-  const isCycleOpen = true; // Demo mode: always open
+  const goalSettingConfig = cycleConfig?.find((config) => config.phaseName === "GOAL_SETTING");
+  const now = new Date();
+  const isCycleOpen = goalSettingConfig
+    ? goalSettingConfig.isActive &&
+      now >= new Date(goalSettingConfig.startDate) &&
+      now <= new Date(goalSettingConfig.endDate)
+    : true;
 
   const submitGoals = api.goal.submitGoalSheet.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       alert("Goals submitted successfully!");
       reset(defaultFormValues);
       setSharedGoalIds(new Set());
+      await Promise.all([
+        utils.goal.getPendingGoals.invalidate(),
+        utils.goal.getLockedGoals.invalidate(),
+        utils.admin.getAuditLogs.invalidate(),
+        utils.admin.getAnalyticsMetrics.invalidate(),
+      ]);
     },
     onError: (error) => {
       alert(error.message);
@@ -112,6 +126,10 @@ export function GoalForm() {
   const watchGoals = watch("goals");
   const currentTotalWeight = watchGoals.reduce((sum, goal) => sum + (Number(goal.weightage) || 0), 0);
   const isWeightageValid = currentTotalWeight === 100;
+  const isSharedGoal = (index: number) => {
+    const dbId = watchGoals[index]?.dbId;
+    return dbId ? sharedGoalIds.has(dbId) : false;
+  };
 
   const onSubmit = (data: GoalSheetFormValues) => {
     submitGoals.mutate({ goals: data.goals, userId: currentUserId });
@@ -210,9 +228,9 @@ export function GoalForm() {
                         <input
                           id={`goals.${index}.thrustArea`}
                           {...register(`goals.${index}.thrustArea`)}
-                          disabled={sharedGoalIds.has(fields[index]?.id ?? "")}
+                          disabled={isSharedGoal(index)}
                           className={`${inputClassName} ${
-                            sharedGoalIds.has(fields[index]?.id ?? "")
+                            isSharedGoal(index)
                               ? "bg-slate-100 text-slate-500 cursor-not-allowed"
                               : ""
                           }`}
@@ -232,9 +250,9 @@ export function GoalForm() {
                         <input
                           id={`goals.${index}.title`}
                           {...register(`goals.${index}.title`)}
-                          disabled={sharedGoalIds.has(fields[index]?.id ?? "")}
+                          disabled={isSharedGoal(index)}
                           className={`${inputClassName} ${
-                            sharedGoalIds.has(fields[index]?.id ?? "")
+                            isSharedGoal(index)
                               ? "bg-slate-100 text-slate-500 cursor-not-allowed"
                               : ""
                           }`}
@@ -254,9 +272,9 @@ export function GoalForm() {
                         <select
                           id={`goals.${index}.uom`}
                           {...register(`goals.${index}.uom`)}
-                          disabled={sharedGoalIds.has(fields[index]?.id ?? "")}
+                          disabled={isSharedGoal(index)}
                           className={`${inputClassName} ${
-                            sharedGoalIds.has(fields[index]?.id ?? "")
+                            isSharedGoal(index)
                               ? "bg-slate-100 text-slate-500 cursor-not-allowed"
                               : ""
                           }`}
@@ -275,9 +293,9 @@ export function GoalForm() {
                         <input
                           id={`goals.${index}.target`}
                           {...register(`goals.${index}.target`)}
-                          disabled={sharedGoalIds.has(fields[index]?.id ?? "")}
+                          disabled={isSharedGoal(index)}
                           className={`${inputClassName} ${
-                            sharedGoalIds.has(fields[index]?.id ?? "")
+                            isSharedGoal(index)
                               ? "bg-slate-100 text-slate-500 cursor-not-allowed"
                               : ""
                           }`}

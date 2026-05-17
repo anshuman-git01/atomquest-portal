@@ -16,13 +16,13 @@ import { useRole } from "~/lib/role-context";
 const ROLE_MENUS = {
   EMPLOYEE: [
     { name: "Home", href: "/", icon: Home },
-    { name: "Goal Setting", href: "/", icon: Target },  // Same page for now
+    { name: "Goal Setting", href: "/goals", icon: Target },
     { name: "Check-ins", href: "/checkins", icon: CheckSquare },
     { name: "Directory", href: "/directory", icon: Users },
   ],
   MANAGER: [
     { name: "Home", href: "/", icon: Home },
-    { name: "Goal Setting", href: "/", icon: Target },
+    { name: "Goal Setting", href: "/goals", icon: Target },
     { name: "Check-ins", href: "/checkins", icon: CheckSquare },
     { name: "Team Approvals", href: "/manager", icon: Users },
     { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
@@ -30,7 +30,7 @@ const ROLE_MENUS = {
   ],
   ADMIN: [
     { name: "Home", href: "/", icon: Home },
-    { name: "Goal Setting", href: "/", icon: Target },
+    { name: "Goal Setting", href: "/goals", icon: Target },
     { name: "Check-ins", href: "/checkins", icon: CheckSquare },
     { name: "Team", href: "/manager", icon: Users },
     { name: "Admin Panel", href: "/admin", icon: Settings },
@@ -41,8 +41,7 @@ const ROLE_MENUS = {
 export function Sidebar() {
   const pathname = usePathname();
   const { role } = useRole();
-  const userRole = role || "EMPLOYEE";
-  const menuItems = ROLE_MENUS[userRole as keyof typeof ROLE_MENUS] || ROLE_MENUS.EMPLOYEE;
+  const menuItems = ROLE_MENUS[role];
 
   const isActive = (href: string) => {
     if (href === "/") {
@@ -93,7 +92,7 @@ export function Sidebar() {
         <div className="text-xs text-slate-500 px-4 py-2">
           <p className="font-semibold text-slate-600 mb-1">Role:</p>
           <p className="capitalize font-medium text-slate-700">
-            {userRole.toLowerCase()}
+            {role.toLowerCase()}
           </p>
         </div>
       </div>

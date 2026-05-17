@@ -78,6 +78,7 @@ function MetricCard({ label, value, accent }: { label: string; value: number; ac
 }
 
 export default function AdminDashboardPage() {
+  const utils = api.useUtils();
   const {
     data: checkIns,
     isLoading: checkInsLoading,
@@ -92,10 +93,23 @@ export default function AdminDashboardPage() {
     error: auditQueryError,
   } = api.admin.getAuditLogs.useQuery();
 
+  const {
+    data: employees,
+    isLoading: employeesLoading,
+    isError: employeesError,
+  } = api.admin.getEmployees.useQuery();
+
   const pushSharedGoal = api.admin.pushSharedGoal.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       alert("Departmental KPI pushed successfully!");
       setFormValues({ thrustArea: "", title: "", uom: "NUMERIC", target: "", weightage: 50, employeeIds: [] });
+      await Promise.all([
+        utils.admin.getCompletionReport.invalidate(),
+        utils.admin.getAuditLogs.invalidate(),
+        utils.admin.getLockedGoalsForAdmin.invalidate(),
+        utils.admin.getAnalyticsMetrics.invalidate(),
+        utils.goal.getLockedGoals.invalidate(),
+      ]);
     },
     onError: (error) => {
       alert("Error pushing KPI: " + error.message);
@@ -112,11 +126,19 @@ export default function AdminDashboardPage() {
   });
 
   const totalCheckIns = checkIns?.totalCheckins ?? 0;
-  const onTrackCount = 0; // Derived from completion report
-  const notStartedCount = 0; // Derived from completion report
+  const onTrackCount = checkIns?.onTrackCheckins ?? 0;
+  const notStartedCount = checkIns?.notStartedCheckins ?? 0;
   const completedCount = checkIns?.completedCheckins ?? 0;
 
-  const achievementRows: AchievementRow[] = [];
+  const achievementRows: AchievementRow[] =
+    checkIns?.achievementRows.map((row) => {
+      const progress = calculateSystemProgressScore(row.uom, row.target, row.actual);
+      return {
+        ...row,
+        progressStatus: formatStatus(row.progressStatus),
+        systemScore: progress.display,
+      };
+    }) ?? [];
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 lg:px-8">
@@ -205,22 +227,34 @@ export default function AdminDashboardPage() {
             </label>
             <p className="text-xs text-slate-500 mb-3">Select employees to receive this KPI</p>
             <div className="space-y-2 max-h-48 overflow-y-auto border border-slate-300 rounded-lg p-3 bg-slate-50">
-              {/* Placeholder: In production, fetch all employees here */}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formValues.employeeIds.length > 0}
-                  onChange={(e) => {
-                    // For demo, just toggle between [demo] and []
-                    setFormValues({
-                      ...formValues,
-                      employeeIds: e.target.checked ? ["demo-employee"] : [],
-                    });
-                  }}
-                  className="rounded border-slate-300"
-                />
-                <span className="text-sm text-slate-700">All Employees (Demo)</span>
-              </label>
+              {employeesLoading && <p className="text-sm text-slate-500">Loading employees...</p>}
+              {employeesError && <p className="text-sm text-red-600">Unable to load employees.</p>}
+              {!employeesLoading && !employeesError && employees?.length === 0 && (
+                <p className="text-sm text-slate-500">No employees found.</p>
+              )}
+              {employees?.map((employee) => {
+                const checked = formValues.employeeIds.includes(employee.id);
+                return (
+                  <label key={employee.id} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        setFormValues({
+                          ...formValues,
+                          employeeIds: e.target.checked
+                            ? [...formValues.employeeIds, employee.id]
+                            : formValues.employeeIds.filter((id) => id !== employee.id),
+                        });
+                      }}
+                      className="rounded border-slate-300"
+                    />
+                    <span className="text-sm text-slate-700">
+                      {employee.name ?? employee.email ?? employee.id}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
           </div>
 
@@ -400,14 +434,7 @@ export default function AdminDashboardPage() {
           )}
         </section>
 
-        {/* Section 4 - Locked Goals Management - Coming Soon */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Locked Goals Management</h2>
-          <p className="mt-1 text-sm text-slate-500">Force unlock goals to return them to draft status.</p>
-          <div className="mt-6 rounded-lg bg-slate-50 px-4 py-3">
-            <p className="text-sm text-slate-600">Feature coming soon</p>
-          </div>
-        </section>
+        <LockedGoalsManagementSection />
       </div>
     </main>
   );
@@ -451,6 +478,7 @@ function CycleManagementSection() {
       phaseName: "GOAL_SETTING",
       startDate,
       endDate,
+      isActive,
     });
   };
 
@@ -576,3 +604,97 @@ function CycleManagementSection() {
   );
 }
 
+function LockedGoalsManagementSection() {
+  const utils = api.useUtils();
+  const {
+    data: lockedGoals,
+    isLoading,
+    isError,
+    error,
+  } = api.admin.getLockedGoalsForAdmin.useQuery();
+
+  const unlockGoal = api.admin.unlockGoal.useMutation({
+    onSuccess: async () => {
+      await Promise.all([
+        utils.admin.getLockedGoalsForAdmin.invalidate(),
+        utils.admin.getCompletionReport.invalidate(),
+        utils.admin.getAuditLogs.invalidate(),
+        utils.admin.getAnalyticsMetrics.invalidate(),
+        utils.goal.getLockedGoals.invalidate(),
+        utils.goal.getPendingGoals.invalidate(),
+      ]);
+    },
+    onError: (mutationError) => {
+      alert("Error unlocking goal: " + mutationError.message);
+    },
+  });
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-slate-900">Locked Goals Management</h2>
+      <p className="mt-1 text-sm text-slate-500">Force unlock approved goals and return them to draft status.</p>
+
+      {isLoading && <p className="mt-6 text-sm text-slate-500">Loading locked goals...</p>}
+
+      {isError && (
+        <p className="mt-6 text-sm text-red-600">
+          Failed to load locked goals: {error.message}
+        </p>
+      )}
+
+      {!isLoading && !isError && lockedGoals?.length === 0 && (
+        <p className="mt-6 text-sm text-slate-500">No locked goals found.</p>
+      )}
+
+      {!isLoading && !isError && lockedGoals && lockedGoals.length > 0 && (
+        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
+              <tr>
+                {["Employee", "Goal", "Weight", "Shared", "Action"].map((col) => (
+                  <th
+                    key={col}
+                    scope="col"
+                    className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
+                  >
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 bg-white">
+              {lockedGoals.map((goal) => (
+                <tr key={goal.id} className="hover:bg-slate-50/80">
+                  <td className="px-4 py-3 text-sm text-slate-900">
+                    <div className="font-medium">{goal.user.name ?? "Unknown employee"}</div>
+                    <div className="text-xs text-slate-500">{goal.user.email}</div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-slate-900">
+                    <div className="font-medium">{goal.title}</div>
+                    <div className="text-xs text-slate-500">{goal.thrustArea}</div>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-700">{goal.weightage}%</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-700">
+                    {goal.isShared ? "Yes" : "No"}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => unlockGoal.mutate({ goalId: goal.id })}
+                      disabled={unlockGoal.isPending}
+                      className="rounded-md bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {unlockGoal.isPending && unlockGoal.variables?.goalId === goal.id
+                        ? "Unlocking..."
+                        : "Unlock"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
