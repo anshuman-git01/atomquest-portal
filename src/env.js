@@ -7,7 +7,7 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
-    DATABASE_URL: z.string().url(),
+    DATABASE_URL: z.string().url().default("file:./prod.db"),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -16,12 +16,19 @@ export const env = createEnv({
         ? z.string()
         : z.string().optional(),
     NEXTAUTH_URL: z.preprocess(
-      (str) => (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : str),
-      process.env.VERCEL ? z.string() : z.string().url(),
+      (str) =>
+        process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : process.env.RAILWAY_PUBLIC_DOMAIN
+            ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+            : str,
+      process.env.VERCEL || process.env.RAILWAY_PUBLIC_DOMAIN
+        ? z.string()
+        : z.string().url(),
     ),
-    AZURE_AD_CLIENT_ID: z.string(),
-    AZURE_AD_CLIENT_SECRET: z.string(),
-    AZURE_AD_TENANT_ID: z.string(),
+    AZURE_AD_CLIENT_ID: z.string().optional(),
+    AZURE_AD_CLIENT_SECRET: z.string().optional(),
+    AZURE_AD_TENANT_ID: z.string().optional(),
   },
 
   /**
@@ -41,7 +48,11 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+    NEXTAUTH_URL:
+      process.env.NEXTAUTH_URL ??
+      (process.env.RAILWAY_PUBLIC_DOMAIN
+        ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+        : undefined),
     AZURE_AD_CLIENT_ID: process.env.AZURE_AD_CLIENT_ID,
     AZURE_AD_CLIENT_SECRET: process.env.AZURE_AD_CLIENT_SECRET,
     AZURE_AD_TENANT_ID: process.env.AZURE_AD_TENANT_ID,

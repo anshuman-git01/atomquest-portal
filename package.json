@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20 <25",
+    "npm": ">=10"
+  },
   "scripts": {
     "build": "next build",
     "db:generate": "prisma migrate dev",
@@ -12,7 +16,8 @@
     "dev": "next dev --turbo",
     "postinstall": "prisma generate",
     "preview": "next build && next start",
-    "start": "next start",
+    "start": "node scripts/railway-start.mjs",
+    "start:next": "next start",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "typecheck": "tsc --noEmit"

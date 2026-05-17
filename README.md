@@ -27,3 +27,17 @@ You can check out the [create-t3-app GitHub repository](https://github.com/t3-os
 ## How do I deploy this?
 
 Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+
+## Railway deployment
+
+This app currently uses Prisma with SQLite. On Railway, set these variables:
+
+```bash
+DATABASE_URL="file:/data/prod.db"
+NEXTAUTH_URL="https://your-railway-app.up.railway.app"
+NEXTAUTH_SECRET="generate-a-long-random-secret"
+```
+
+For persistent SQLite data, add a Railway volume and mount it at `/data`. The start script creates the SQLite schema before `next start`, so the database tables are created automatically on deploy.
+
+If you do not use Microsoft Entra/Azure login, leave the `AZURE_AD_*` variables unset. The demo login provider will still work on AtomQuest/localhost demo URLs.
