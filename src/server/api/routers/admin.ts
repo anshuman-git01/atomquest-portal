@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+
+import { ensureDemoUser, ensureDemoUsers } from "~/server/api/demo-data";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 async function createAuditLog(
@@ -10,7 +13,7 @@ async function createAuditLog(
     newData?: unknown;
   },
 ) {
-  const admin = await ctx.db.user.findUnique({ where: { id: "adm1" } });
+  const admin = await ensureDemoUser(ctx.db, "adm1");
   if (!admin) return;
 
   await ctx.db.auditLog.create({
@@ -26,6 +29,7 @@ async function createAuditLog(
 
 export const adminRouter = createTRPCRouter({
   getEmployees: publicProcedure.query(async ({ ctx }) => {
+    await ensureDemoUsers(ctx.db);
     return ctx.db.user.findMany({
       where: { role: "EMPLOYEE" },
       select: { id: true, name: true, email: true },
@@ -107,14 +111,29 @@ export const adminRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await ensureDemoUsers(ctx.db);
       const { employeeIds, ...goalData } = input;
+      const employees = await ctx.db.user.findMany({
+        where: {
+          id: { in: employeeIds },
+          role: "EMPLOYEE",
+        },
+        select: { id: true },
+      });
+
+      if (employees.length !== employeeIds.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "One or more selected employees no longer exist. Refresh and try again.",
+        });
+      }
 
       const createdGoals = await Promise.all(
-        employeeIds.map((userId) =>
+        employees.map((employee) =>
           ctx.db.goal.create({
             data: {
               ...goalData,
-              userId,
+              userId: employee.id,
               status: "LOCKED",
               isShared: true,
             },
@@ -182,6 +201,7 @@ export const adminRouter = createTRPCRouter({
   unlockGoal: publicProcedure
     .input(z.object({ goalId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      await ensureDemoUsers(ctx.db);
       const previousGoal = await ctx.db.goal.findUnique({ where: { id: input.goalId } });
       const goal = await ctx.db.goal.update({
         where: { id: input.goalId },

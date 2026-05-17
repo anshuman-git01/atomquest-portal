@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+
+import { ensureDemoUser, ensureDemoUsers } from "~/server/api/demo-data";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 async function createAuditLog(
@@ -11,7 +14,7 @@ async function createAuditLog(
     newData?: unknown;
   },
 ) {
-  const changedBy = await ctx.db.user.findUnique({ where: { id: input.changedById } });
+  const changedBy = await ensureDemoUser(ctx.db, input.changedById);
   if (!changedBy) return;
 
   await ctx.db.auditLog.create({
@@ -75,6 +78,7 @@ export const goalRouter = createTRPCRouter({
   approveGoal: publicProcedure
     .input(z.object({ goalId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      await ensureDemoUsers(ctx.db);
       const previousGoal = await ctx.db.goal.findUnique({ where: { id: input.goalId } });
       const goal = await ctx.db.goal.update({
         where: { id: input.goalId },
@@ -93,6 +97,7 @@ export const goalRouter = createTRPCRouter({
   returnGoal: publicProcedure
     .input(z.object({ goalId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      await ensureDemoUsers(ctx.db);
       const previousGoal = await ctx.db.goal.findUnique({ where: { id: input.goalId } });
       const goal = await ctx.db.goal.update({
         where: { id: input.goalId },
@@ -129,6 +134,7 @@ export const goalRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await ensureDemoUsers(ctx.db);
       const previousGoal = await ctx.db.goal.findUnique({ where: { id: input.goalId } });
       const goal = await ctx.db.goal.update({
         where: { id: input.goalId },
@@ -150,6 +156,14 @@ export const goalRouter = createTRPCRouter({
   submitGoalSheet: publicProcedure
     .input(submitGoalSheetInput)
     .mutation(async ({ ctx, input }) => {
+      const user = await ensureDemoUser(ctx.db, input.userId);
+      if (!user) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Selected demo user does not exist. Please switch roles and try again.",
+        });
+      }
+
       await ctx.db.goal.deleteMany({
         where: {
           userId: input.userId,
