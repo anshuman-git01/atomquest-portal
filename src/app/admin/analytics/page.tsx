@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { CheckCircle2, CircleSlash, TrendingUp, TriangleAlert, type LucideIcon } from "lucide-react";
 import {
   PieChart,
   Pie,
@@ -30,6 +31,12 @@ type ManagerEffectivenessData = {
   status: string;
 };
 
+type StatusInfo = {
+  label: string;
+  color: string;
+  icon: LucideIcon;
+};
+
 // Color mapping for UoM types
 const UOM_COLORS: Record<string, string> = {
   NUMERIC: "#3b82f6",
@@ -47,11 +54,11 @@ const UOM_NAMES: Record<string, string> = {
 };
 
 // Get status label based on completion rate
-const getStatusLabel = (rate: number): { label: string; color: string; icon: string } => {
-  if (rate === 100) return { label: "Perfect", color: "#10b981", icon: "[OK]" };
-  if (rate >= 90) return { label: "Excellent", color: "#3b82f6", icon: "[UP]" };
-  if (rate >= 75) return { label: "On Track", color: "#f59e0b", icon: "[/]" };
-  return { label: "Needs Improvement", color: "#ef4444", icon: "[!]" };
+const getStatusLabel = (rate: number): StatusInfo => {
+  if (rate === 100) return { label: "Perfect", color: "#10b981", icon: CheckCircle2 };
+  if (rate >= 90) return { label: "Excellent", color: "#3b82f6", icon: TrendingUp };
+  if (rate >= 75) return { label: "On Track", color: "#f59e0b", icon: CircleSlash };
+  return { label: "Needs Improvement", color: "#ef4444", icon: TriangleAlert };
 };
 
 // Custom tooltips
@@ -285,6 +292,7 @@ export default function AnalyticsPage() {
                 <tbody className="divide-y divide-slate-100">
                   {managerEffectivenessData.map((item) => {
                     const statusInfo = getStatusLabel(item.completionRate);
+                    const StatusIcon = statusInfo.icon;
                     return (
                       <tr key={item.id} className="hover:bg-slate-50">
                         <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
@@ -304,7 +312,8 @@ export default function AnalyticsPage() {
                               color: statusInfo.color,
                             }}
                           >
-                            {statusInfo.icon} {statusInfo.label}
+                            <StatusIcon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                            {statusInfo.label}
                           </span>
                         </td>
                       </tr>

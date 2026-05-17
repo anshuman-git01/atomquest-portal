@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Target, TrendingUp, Users, BarChart3 } from "lucide-react";
+import { ArrowRight, Target, TrendingUp, Users, BarChart3, Hand } from "lucide-react";
 import { api } from "~/trpc/react";
 import { useRole } from "~/lib/role-context";
 
@@ -41,8 +41,9 @@ function EmployeeDashboard() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            Welcome back, Sarah! [WAVE]
+          <h1 className="mb-2 flex items-center gap-2 text-3xl font-bold text-slate-900">
+            Welcome back, Sarah!
+            <Hand className="h-7 w-7 text-amber-500" aria-hidden="true" />
           </h1>
           <p className="text-slate-600">Track your goals and progress for Q4</p>
         </div>

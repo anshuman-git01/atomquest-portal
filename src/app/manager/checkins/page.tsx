@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { calculateSystemProgressScore } from "~/lib/progress-score";
 import { api } from "~/trpc/react";
 
 type TeamCheckIn = {
@@ -18,91 +19,28 @@ type TeamCheckIn = {
   };
 };
 
-function parseNumericValue(value: string): number | null {
-  const cleaned = value.replace(/[$,%\s]/g, "").trim();
-  if (!cleaned) return null;
-  const num = Number.parseFloat(cleaned);
-  return Number.isFinite(num) ? num : null;
-}
-
-function calculateProgressScore(
-  uom: string,
-  target: string,
-  actualAchievement: string,
-  progressStatus: string,
-): number {
-  // Completed Override: If progressStatus is "COMPLETED", return 100
-  if (progressStatus === "COMPLETED") {
-    return 100;
-  }
-
-  // Timeline: If status is "ON_TRACK", return 100
-  if (progressStatus === "ON_TRACK") {
-    return 100;
-  }
-
-  switch (uom) {
-    case "NUMERIC":
-    case "PERCENTAGE": {
-      const actual = parseNumericValue(actualAchievement);
-      const targetVal = parseNumericValue(target);
-
-      // Divide-by-zero safety: if target is 0, return 0
-      if (actual === null || targetVal === null || targetVal === 0) {
-        return 0;
-      }
-
-      // Score = (Actual Achievement ÷ Target) * 100
-      const score = (actual / targetVal) * 100;
-      return Math.round(score * 10) / 10;
-    }
-    case "ZERO_BASED": {
-      const actual = parseNumericValue(actualAchievement);
-      if (actual === null) {
-        return 0;
-      }
-      // If Actual Achievement is exactly 0, return 100
-      if (actual === 0) {
-        return 100;
-      }
-      // Otherwise, return 0
-      return 0;
-    }
-    default:
-      return 0;
-  }
-}
-
-function calculateSystemProgressScore(
-  uom: string,
-  target: string,
-  actualAchievement: string,
-  progressStatus: string,
-): { score: number; display: string } {
-  const score = calculateProgressScore(uom, target, actualAchievement, progressStatus);
-  return { score, display: `${score}%` };
-}
-
 function formatProgressStatus(status: string) {
   return status.replace(/_/g, " ");
 }
 
-function scoreColorClass(score: number) {
+function scoreColorClass(score: number | null) {
+  if (score === null) return "text-slate-500";
   if (score >= 100) return "text-green-600";
   if (score >= 70) return "text-amber-600";
   return "text-red-600";
 }
 
-function scoreStrokeClass(score: number) {
+function scoreStrokeClass(score: number | null) {
+  if (score === null) return "stroke-slate-300";
   if (score >= 100) return "stroke-green-600";
   if (score >= 70) return "stroke-amber-500";
   return "stroke-red-500";
 }
 
-function CircularProgress({ score, display }: { score: number; display: string }) {
+function CircularProgress({ score, display }: { score: number | null; display: string }) {
   const radius = 36;
   const circumference = 2 * Math.PI * radius;
-  const clamped = Math.min(100, Math.max(0, score));
+  const clamped = score === null ? 0 : Math.min(100, Math.max(0, score));
   const offset = circumference - (clamped / 100) * circumference;
 
   return (
@@ -138,7 +76,6 @@ function CheckInReviewCard({ checkIn }: { checkIn: TeamCheckIn }) {
     checkIn.goal.uom,
     checkIn.goal.target,
     checkIn.actualAchievement,
-    checkIn.progressStatus,
   );
 
   const addComment = api.checkin.addManagerComment.useMutation({

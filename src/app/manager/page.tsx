@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BarChart3, Scale, Target } from "lucide-react";
 import { api } from "~/trpc/react";
 import { useRole } from "~/lib/role-context";
 
@@ -125,9 +126,18 @@ export default function ManagerDashboardPage() {
                       <span className="text-xs bg-slate-100 px-2 py-1 rounded">{formatStatus(goal.status)}</span>
                     </div>
                     <div className="flex gap-3 mt-3 text-sm text-slate-600 flex-wrap">
-                      <span>[GOAL] Target: {goal.target}</span>
-                      <span>[WEIGHT] Weight: {goal.weightage}%</span>
-                      <span>[CHART] UoM: {formatUom(goal.uom)}</span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Target className="h-4 w-4 text-blue-500" aria-hidden="true" />
+                        Target: {goal.target}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Scale className="h-4 w-4 text-amber-500" aria-hidden="true" />
+                        Weight: {goal.weightage}%
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <BarChart3 className="h-4 w-4 text-violet-500" aria-hidden="true" />
+                        UoM: {formatUom(goal.uom)}
+                      </span>
                     </div>
                     <div className="flex gap-2 mt-4 pt-3 border-t">
                       <button

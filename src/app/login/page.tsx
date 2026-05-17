@@ -2,25 +2,26 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ShieldCheck, Target, User, Users, Zap } from "lucide-react";
 import type { Role } from "~/lib/role-context";
 
 const DEMO_ACCOUNTS = [
   {
-    emoji: "Employee",
+    icon: User,
     title: "Employee",
     description: "View goals and check-ins",
     email: "employee@demo.com",
     role: "EMPLOYEE" as const,
   },
   {
-    emoji: "Manager",
+    icon: Users,
     title: "Manager",
     description: "Review and approve goals",
     email: "manager@demo.com",
     role: "MANAGER" as const,
   },
   {
-    emoji: "Admin",
+    icon: ShieldCheck,
     title: "Admin",
     description: "Governance and reporting",
     email: "admin@demo.com",
@@ -55,7 +56,7 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 mb-4">
-            <span className="text-2xl">[ATOM]</span>
+            <Zap className="h-8 w-8 text-white" aria-hidden="true" />
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-slate-900 mb-2">
             AtomQuest Portal
@@ -75,7 +76,10 @@ export default function LoginPage() {
 
         {/* Demo Account Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          {DEMO_ACCOUNTS.map((account) => (
+          {DEMO_ACCOUNTS.map((account) => {
+            const Icon = account.icon;
+
+            return (
             <button
               key={account.email}
               onClick={() => handleDemoLogin(account.email, account.role)}
@@ -87,7 +91,9 @@ export default function LoginPage() {
 
               {/* Content */}
               <div className="relative z-10">
-                <div className="text-4xl mb-3">{account.emoji}</div>
+                <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <Icon className="h-6 w-6" aria-hidden="true" />
+                </div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-1">
                   {account.title}
                 </h3>
@@ -109,12 +115,16 @@ export default function LoginPage() {
                 )}
               </div>
             </button>
-          ))}
+            );
+          })}
         </div>
 
         {/* Info Box */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700 mb-6">
-          <p className="font-semibold mb-2">[GOAL] Demo Credentials</p>
+          <p className="mb-2 flex items-center gap-2 font-semibold">
+            <Target className="h-4 w-4" aria-hidden="true" />
+            Demo Credentials
+          </p>
           <p>Click any card above to instantly log in with that role. No password required for demo purposes.</p>
         </div>
 

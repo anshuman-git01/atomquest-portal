@@ -1,13 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import {
+  BarChart3,
+  CheckCircle2,
+  ClipboardCheck,
+  LockKeyhole,
+  Settings,
+  Shuffle,
+  Target,
+  type LucideIcon,
+} from "lucide-react";
 
 type PageDirectory = {
   path: string;
   title: string;
   description: string;
   role: string;
-  icon: string;
+  icon: LucideIcon;
   section: string;
 };
 
@@ -18,7 +28,7 @@ const pages: PageDirectory[] = [
     title: "Home - Goal Sheet",
     description: "Main employee dashboard for creating and managing goals. Enforce 100% weightage rule with up to 8 goals per cycle.",
     role: "Employee",
-    icon: "[TARGET]",
+    icon: Target,
     section: "Employee Workflows",
   },
   {
@@ -26,7 +36,7 @@ const pages: PageDirectory[] = [
     title: "Check-ins - Quarterly Updates",
     description: "File quarterly check-ins for your goals. Time-locked by phase (Q1/July, Q2/October, Q3/January, Q4/March/April).",
     role: "Employee",
-    icon: "[CHECKINS]",
+    icon: ClipboardCheck,
     section: "Employee Workflows",
   },
 
@@ -36,7 +46,7 @@ const pages: PageDirectory[] = [
     title: "Manager - Pending Approvals",
     description: "Approve or return pending goal sheets. Edit target/weightage inline before locking. See employee goals awaiting approval.",
     role: "Manager",
-    icon: "check",
+    icon: CheckCircle2,
     section: "Manager Workflows",
   },
   {
@@ -44,7 +54,7 @@ const pages: PageDirectory[] = [
     title: "Manager - Check-in Review",
     description: "Review employee check-ins by quarter. Approve progress updates and provide feedback. See system-calculated progress scores.",
     role: "Manager",
-    icon: "[ANALYTICS]",
+    icon: BarChart3,
     section: "Manager Workflows",
   },
 
@@ -54,7 +64,7 @@ const pages: PageDirectory[] = [
     title: "Admin - Governance Dashboard",
     description: "Push departmental KPIs, unlock locked goals, manage cycles, and view audit logs. Global configuration hub.",
     role: "Admin",
-    icon: "Admin",
+    icon: Settings,
     section: "Admin Workflows",
   },
   {
@@ -62,8 +72,41 @@ const pages: PageDirectory[] = [
     title: "Admin - Analytics Module",
     description: "Organization-wide insights: Goal distribution by UoM, quarterly trends, and Manager Effectiveness Leaderboard.",
     role: "Admin",
-    icon: "[CHART]",
+    icon: BarChart3,
     section: "Admin Workflows",
+  },
+];
+
+const features = [
+  {
+    icon: Target,
+    title: "Goal Management",
+    description: "Create, approve, and track employee goals with 100% weightage enforcement",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Quarterly Check-ins",
+    description: "Time-locked check-ins with phase-specific windows (Q1/July, Q2/October, etc.)",
+  },
+  {
+    icon: CheckCircle2,
+    title: "Manager Approval",
+    description: "Inline editing, approval workflows, and return-to-draft capabilities",
+  },
+  {
+    icon: BarChart3,
+    title: "Analytics Dashboard",
+    description: "Organization-wide insights, goal distribution, and manager effectiveness metrics",
+  },
+  {
+    icon: LockKeyhole,
+    title: "Admin Governance",
+    description: "Cycle management, departmental KPIs, goal unlock, and audit logging",
+  },
+  {
+    icon: Shuffle,
+    title: "Shared Goals",
+    description: "Push organizational KPIs and cascade updates automatically",
   },
 ];
 
@@ -103,6 +146,7 @@ export default function DirectoryPage() {
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   {sectionPages.map((page) => {
                     const colors = roleColors[page.role] || roleColors["Employee"];
+                    const Icon = page.icon;
 
                     return (
                       <Link key={page.path} href={page.path}>
@@ -113,7 +157,9 @@ export default function DirectoryPage() {
                           <div className="relative z-10">
                             {/* Header with Icon and Role */}
                             <div className="mb-3 flex items-start justify-between">
-                              <span className="text-3xl">{page.icon}</span>
+                              <span className={`inline-flex h-10 w-10 items-center justify-center rounded-lg ${colors?.bg} ${colors?.text}`}>
+                                <Icon className="h-5 w-5" aria-hidden="true" />
+                              </span>
                               <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${colors?.badge}`}>
                                 {page.role}
                               </span>
@@ -197,48 +243,21 @@ export default function DirectoryPage() {
         <section className="mt-10 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
           <h2 className="mb-6 text-lg font-semibold text-slate-900">Key Features</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div className="flex gap-3">
-              <span className="text-2xl">[TARGET]</span>
-              <div>
-                <h3 className="font-semibold text-slate-900">Goal Management</h3>
-                <p className="text-sm text-slate-600">Create, approve, and track employee goals with 100% weightage enforcement</p>
+            {features.map((feature) => {
+              const Icon = feature.icon;
+
+              return (
+              <div key={feature.title} className="flex gap-3">
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <div>
+                  <h3 className="font-semibold text-slate-900">{feature.title}</h3>
+                  <p className="text-sm text-slate-600">{feature.description}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-2xl">[CHECKINS]</span>
-              <div>
-                <h3 className="font-semibold text-slate-900">Quarterly Check-ins</h3>
-                <p className="text-sm text-slate-600">Time-locked check-ins with phase-specific windows (Q1/July, Q2/October, etc.)</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-2xl">check</span>
-              <div>
-                <h3 className="font-semibold text-slate-900">Manager Approval</h3>
-                <p className="text-sm text-slate-600">Inline editing, approval workflows, and return-to-draft capabilities</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-2xl">[ANALYTICS]</span>
-              <div>
-                <h3 className="font-semibold text-slate-900">Analytics Dashboard</h3>
-                <p className="text-sm text-slate-600">Organization-wide insights, goal distribution, and manager effectiveness metrics</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-2xl">[LOCKED]</span>
-              <div>
-                <h3 className="font-semibold text-slate-900">Admin Governance</h3>
-                <p className="text-sm text-slate-600">Cycle management, departmental KPIs, goal unlock, and audit logging</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-2xl">[SYNC]</span>
-              <div>
-                <h3 className="font-semibold text-slate-900">Shared Goals</h3>
-                <p className="text-sm text-slate-600">Push organizational KPIs and cascade updates automatically</p>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </section>
 
