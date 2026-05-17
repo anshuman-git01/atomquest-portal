@@ -1,43 +1,99 @@
-# Create T3 App
+# 🎯 AtomQuest Portal
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+[![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
+[![tRPC](https://img.shields.io/badge/tRPC-11.x-2596be)](https://trpc.io/)
+[![Prisma](https://img.shields.io/badge/Prisma-6.x-2D3748)](https://prisma.io/)
+[![Tailwind](https://img.shields.io/badge/Tailwind-4.x-38B2AC)](https://tailwindcss.com/)
+[![Railway](https://img.shields.io/badge/Railway-Deployed-0B0D0E)](https://railway.app/)
 
-## What's next? How do I make an app with this?
+**Enterprise Goal Setting & Tracking Portal** for AtomQuest Hackathon 1.0
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+## 🌐 Live Demo
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+**https://atomquest-portal.up.railway.app**
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+> No login required! Use the role switcher in the top navbar.
 
-## Learn More
+---
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+## 📋 Features
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+### Phase 1: Goal Creation & Approval
+- ✅ Create goals with Thrust Area, Title, Description
+- ✅ 4 UoM types: Numeric, Percentage, Timeline, Zero-based
+- ✅ **Validation rules:** Total weightage = 100%, Min 10% per goal, Max 8 goals
+- ✅ Manager approval workflow (approve, return for rework)
+- ✅ Inline edit of targets/weightage during approval
+- ✅ Goals lock after approval
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+### Phase 2: Achievement Tracking
+- ✅ Quarterly check-in interface (Q1-Q4)
+- ✅ Status: Not Started / On Track / Completed
+- ✅ System-computed progress scores per UoM type
+- ✅ **Quarterly time locks:** Q1=July, Q2=October, Q3=January, Q4=March/April
+- ✅ Manager comments and feedback
 
-## How do I deploy this?
+### Shared Goals (BRD 1.10-1.12)
+- ✅ Admin pushes departmental KPIs to multiple employees
+- ✅ Recipients adjust weightage only (Title/Target read-only)
+- ✅ Cascading achievement updates to all linked goals
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+### Reporting & Governance
+- ✅ CSV/Excel export of achievement reports
+- ✅ Real-time completion dashboard
+- ✅ Audit trail with timestamps
 
-## Railway deployment
+### 3 User Roles
+| Role | Capabilities |
+|------|-------------|
+| 👤 **Employee** | Create goals, submit check-ins, view locked goals |
+| 👔 **Manager** | Approve goals, edit inline, add comments |
+| ⚙️ **Admin** | Push KPIs, unlock goals, export reports, audit logs |
 
-This app currently uses Prisma with SQLite. On Railway, set these variables:
+### Bonus Features
+- ✅ **Microsoft Entra ID (Azure AD)** - SSO ready
+- ✅ **Analytics Module** - QoQ trends, goal distribution, manager leaderboard
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js 15 (App Router) |
+| API | tRPC |
+| Database | SQLite + Prisma ORM |
+| Styling | Tailwind CSS |
+| Forms | React Hook Form + Zod |
+| Charts | Recharts |
+| Icons | Lucide React |
+| Auth | NextAuth.js (Azure AD) |
+| Hosting | Railway |
+
+---
+
+## 🚀 Local Development
+
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+
+### Setup
 
 ```bash
-DATABASE_URL="file:/data/prod.db"
-NEXTAUTH_URL="https://your-railway-app.up.railway.app"
-NEXTAUTH_SECRET="generate-a-long-random-secret"
-```
+# Clone repository
+git clone https://github.com/anshuman-git01/atomquest-portal.git
+cd atomquest-portal
 
-For persistent SQLite data, add a Railway volume and mount it at `/data`. The start script creates the SQLite schema before `next start`, so the database tables are created automatically on deploy.
+# Install dependencies
+npm install
 
-If you do not use Microsoft Entra/Azure login, leave the `AZURE_AD_*` variables unset. The demo login provider will still work on AtomQuest/localhost demo URLs.
+# Set up database
+npx prisma db push
+
+# Generate Prisma client
+npx prisma generate
+
+# Start development server
+npm run dev
