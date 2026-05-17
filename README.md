@@ -11,7 +11,7 @@
 
 ## 🌐 Live Demo
 
-**https://atomquest-portal.up.railway.app**
+**https://atomquest-portal-production-fc18.up.railway.app**
 
 > No login required! Use the role switcher in the top navbar.
 
